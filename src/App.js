@@ -1,10 +1,12 @@
 import React from 'react';
+import { connect } from 'react-redux';
 import Blog from './components/Blog';
 import BlogForm from './components/BlogForm';
 import Notification from './components/Notification';
 import Togglable from './components/Togglable';
 import blogService from './services/blogs';
 import loginService from './services/login';
+import { showNotification } from './reducers/notificationReducer';
 
 class App extends React.Component {
   constructor(props) {
@@ -17,13 +19,14 @@ class App extends React.Component {
       title: '',
       author: '',
       url: '',
-      notification: null,
     };
   }
 
   componentWillMount() {
     blogService.getAll().then(blogs => this.setState({ blogs }));
+
     const loggedUserJSON = window.localStorage.getItem('loggedBlogAppUser');
+
     if (loggedUserJSON) {
       const user = JSON.parse(loggedUserJSON);
       this.setState({ user });
@@ -31,25 +34,18 @@ class App extends React.Component {
     }
   }
 
-  notify = (message, type = 'info') => {
-    this.setState({
-      notification: {
-        message,
-        type,
-      },
-    });
-    setTimeout(() => {
-      this.setState({
-        notification: null,
-      });
-    }, 10000);
-  };
-
   like = id => async () => {
     const liked = this.state.blogs.find(b => b._id === id);
     const updated = { ...liked, likes: liked.likes + 1 };
+
     await blogService.update(id, updated);
-    this.notify(`you liked '${updated.title}' by ${updated.author}`);
+
+    this.props.showNotification(
+      'info',
+      `you liked '${updated.title}' by ${updated.author}`,
+      3,
+    );
+
     this.setState({
       blogs: this.state.blogs.map(b => (b._id === id ? updated : b)),
     });
@@ -60,12 +56,19 @@ class App extends React.Component {
     const ok = window.confirm(
       `remove blog '${deleted.title}' by ${deleted.author}?`,
     );
-    if (ok === false) {
+
+    if (!ok) {
       return;
     }
 
     await blogService.remove(id);
-    this.notify(`blog '${deleted.title}' by ${deleted.author} removed`);
+
+    this.props.showNotification(
+      'info',
+      `blog '${deleted.title}' by ${deleted.author} removed`,
+      3,
+    );
+
     this.setState({
       blogs: this.state.blogs.filter(b => b._id !== id),
     });
@@ -80,7 +83,13 @@ class App extends React.Component {
     };
 
     const result = await blogService.create(blog);
-    this.notify(`blog '${blog.title}' by ${blog.author} added`);
+
+    this.props.showNotification(
+      'info',
+      `blog '${blog.title}' by ${blog.author} added`,
+      3,
+    );
+
     this.setState({
       title: '',
       url: '',
@@ -89,14 +98,15 @@ class App extends React.Component {
     });
   };
 
-  logout = () => {
+  logout = async () => {
     window.localStorage.removeItem('loggedBlogAppUser');
-    this.notify('logged out');
+    this.props.showNotification('info', 'logged out', 3);
     this.setState({ user: null });
   };
 
   login = async event => {
     event.preventDefault();
+
     try {
       const user = await loginService.login({
         username: this.state.username,
@@ -105,13 +115,12 @@ class App extends React.Component {
 
       window.localStorage.setItem('loggedBlogAppUser', JSON.stringify(user));
       blogService.setToken(user.token);
-      this.notify('welcome back!');
+
+      this.props.showNotification('info', 'welcome back!', 3);
+
       this.setState({ username: '', password: '', user });
     } catch (exception) {
-      this.notify('käyttäjätunnus tai salasana virheellinen', 'error');
-      setTimeout(() => {
-        this.setState({ error: null });
-      }, 5000);
+      this.props.showNotification('error', 'invalid credentials', 3);
     }
   };
 
@@ -124,10 +133,10 @@ class App extends React.Component {
       return (
         <div>
           <Notification notification={this.state.notification} />
-          <h2>Kirjaudu sovellukseen</h2>
+          <h2>Log in</h2>
           <form onSubmit={this.login}>
             <div>
-              käyttäjätunnus
+              username
               <input
                 type="text"
                 name="username"
@@ -136,7 +145,7 @@ class App extends React.Component {
               />
             </div>
             <div>
-              salasana
+              password
               <input
                 type="password"
                 name="password"
@@ -144,7 +153,7 @@ class App extends React.Component {
                 onChange={this.handleLoginChange}
               />
             </div>
-            <button type="submit">kirjaudu</button>
+            <button type="submit">log in</button>
           </form>
         </div>
       );
@@ -156,10 +165,10 @@ class App extends React.Component {
 
     return (
       <div>
-        <Notification notification={this.state.notification} />
+        <Notification />
         {this.state.user.name} logged in{' '}
         <button onClick={this.logout}>logout</button>
-        <Togglable buttonLabel="uusi blogi">
+        <Togglable buttonLabel="add new blog">
           <BlogForm
             handleChange={this.handleLoginChange}
             title={this.state.title}
@@ -186,4 +195,4 @@ class App extends React.Component {
   }
 }
 
-export default App;
+export default connect(null, { showNotification })(App);
