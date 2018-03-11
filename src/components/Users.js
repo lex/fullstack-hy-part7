@@ -1,8 +1,9 @@
 import React from 'react';
-import { connect } from 'react-redux';
+import { Link } from 'react-router-dom';
 
 const Users = props => (
   <div>
+    <h2>users</h2>
     <table>
       <thead>
         <tr>
@@ -13,7 +14,9 @@ const Users = props => (
       <tbody>
         {props.users.map(u => (
           <tr key={u.id}>
-            <td>{u.name}</td>
+            <td>
+              <Link to={u.id}>{u.name}</Link>
+            </td>
             <td>{u.blogs.length}</td>
           </tr>
         ))}
@@ -22,10 +25,4 @@ const Users = props => (
   </div>
 );
 
-const mapStateToProps = state => {
-  return {
-    users: state.users.users,
-  };
-};
-
-export default connect(mapStateToProps)(Users);
+export default Users;

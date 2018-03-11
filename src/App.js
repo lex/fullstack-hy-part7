@@ -1,11 +1,12 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { BrowserRouter as Router, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Route } from 'react-router-dom';
 import Blog from './components/Blog';
 import BlogForm from './components/BlogForm';
 import Notification from './components/Notification';
 import Togglable from './components/Togglable';
 import Users from './components/Users';
+import User from './components/User';
 import loginService from './services/login';
 import { showNotification } from './reducers/notificationReducer';
 import {
@@ -183,8 +184,13 @@ class App extends React.Component {
 
   renderUsers = () => (
     <div>
-      <h2>users</h2>
-      <Users />
+      <Users users={this.props.users} />
+    </div>
+  );
+
+  renderUser = id => (
+    <div>
+      <User user={this.props.users.find(u => u.id === id)} />
     </div>
   );
 
@@ -206,7 +212,12 @@ class App extends React.Component {
             />
           </Togglable>
           <Route exact path="/" render={() => this.renderBlogs()} />
-          <Route path="/users" render={() => this.renderUsers()} />
+          <Route exact path="/users" render={() => this.renderUsers()} />
+          <Route
+            exact
+            path="/users/:id"
+            render={({ match }) => this.renderUser(match.params.id)}
+          />
         </div>
       </Router>
     </div>
@@ -221,6 +232,7 @@ const mapStateToProps = state => {
   return {
     blogs: state.blogs.blogs.sort((a, b) => b.likes - a.likes),
     user: state.user.user,
+    users: state.users.users,
   };
 };
 
