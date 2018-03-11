@@ -4,15 +4,21 @@ import Blog from './components/Blog';
 import BlogForm from './components/BlogForm';
 import Notification from './components/Notification';
 import Togglable from './components/Togglable';
-import blogService from './services/blogs';
 import loginService from './services/login';
 import { showNotification } from './reducers/notificationReducer';
+import {
+  initializeBlogs,
+  addBlog,
+  removeBlog,
+  updateBlog,
+  setToken,
+} from './reducers/blogReducer';
 
 class App extends React.Component {
   constructor(props) {
     super(props);
+
     this.state = {
-      blogs: [],
       user: null,
       username: '',
       password: '',
@@ -23,36 +29,32 @@ class App extends React.Component {
   }
 
   componentWillMount() {
-    blogService.getAll().then(blogs => this.setState({ blogs }));
-
     const loggedUserJSON = window.localStorage.getItem('loggedBlogAppUser');
 
     if (loggedUserJSON) {
       const user = JSON.parse(loggedUserJSON);
       this.setState({ user });
-      blogService.setToken(user.token);
+      this.props.setToken(user.token);
     }
+
+    this.props.initializeBlogs();
   }
 
   like = id => async () => {
-    const liked = this.state.blogs.find(b => b._id === id);
+    const liked = this.props.blogs.find(b => b.id === id);
     const updated = { ...liked, likes: liked.likes + 1 };
 
-    await blogService.update(id, updated);
+    await this.props.updateBlog(id, updated);
 
     this.props.showNotification(
       'info',
-      `you liked '${updated.title}' by ${updated.author}`,
+      `you liked '${liked.title}' by ${liked.author}`,
       3,
     );
-
-    this.setState({
-      blogs: this.state.blogs.map(b => (b._id === id ? updated : b)),
-    });
   };
 
   remove = id => async () => {
-    const deleted = this.state.blogs.find(b => b._id === id);
+    const deleted = this.props.blogs.find(b => b.id === id);
     const ok = window.confirm(
       `remove blog '${deleted.title}' by ${deleted.author}?`,
     );
@@ -61,28 +63,25 @@ class App extends React.Component {
       return;
     }
 
-    await blogService.remove(id);
+    await this.props.removeBlog(id);
 
     this.props.showNotification(
       'info',
       `blog '${deleted.title}' by ${deleted.author} removed`,
       3,
     );
-
-    this.setState({
-      blogs: this.state.blogs.filter(b => b._id !== id),
-    });
   };
 
   addBlog = async event => {
     event.preventDefault();
+
     const blog = {
       title: this.state.title,
       author: this.state.author,
       url: this.state.url,
     };
 
-    const result = await blogService.create(blog);
+    await this.props.addBlog(blog);
 
     this.props.showNotification(
       'info',
@@ -94,7 +93,6 @@ class App extends React.Component {
       title: '',
       url: '',
       author: '',
-      blogs: this.state.blogs.concat(result),
     });
   };
 
@@ -114,7 +112,7 @@ class App extends React.Component {
       });
 
       window.localStorage.setItem('loggedBlogAppUser', JSON.stringify(user));
-      blogService.setToken(user.token);
+      this.props.setToken(user.token);
 
       this.props.showNotification('info', 'welcome back!', 3);
 
@@ -161,7 +159,7 @@ class App extends React.Component {
 
     const byLikes = (b1, b2) => b2.likes - b1.likes;
 
-    const blogsInOrder = this.state.blogs.sort(byLikes);
+    const blogsInOrder = this.props.blogs.sort(byLikes);
 
     return (
       <div>
@@ -180,10 +178,10 @@ class App extends React.Component {
         <h2>blogs</h2>
         {blogsInOrder.map(blog => (
           <Blog
-            key={blog._id}
+            key={blog.id}
             blog={blog}
-            like={this.like(blog._id)}
-            remove={this.remove(blog._id)}
+            like={this.like(blog.id)}
+            remove={this.remove(blog.id)}
             deletable={
               blog.user === undefined ||
               blog.user.username === this.state.user.username
@@ -195,4 +193,17 @@ class App extends React.Component {
   }
 }
 
-export default connect(null, { showNotification })(App);
+const mapStateToProps = state => {
+  return {
+    blogs: state.blogs.blogs,
+  };
+};
+
+export default connect(mapStateToProps, {
+  showNotification,
+  initializeBlogs,
+  addBlog,
+  removeBlog,
+  updateBlog,
+  setToken,
+})(App);
