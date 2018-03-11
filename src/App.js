@@ -2,6 +2,7 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { BrowserRouter as Router, Route } from 'react-router-dom';
 import Blog from './components/Blog';
+import BlogDetails from './components/BlogDetails';
 import BlogForm from './components/BlogForm';
 import Notification from './components/Notification';
 import Togglable from './components/Togglable';
@@ -167,18 +168,7 @@ class App extends React.Component {
   renderBlogs = () => (
     <div>
       <h2>blogs</h2>
-      {this.props.blogs.map(blog => (
-        <Blog
-          key={blog.id}
-          blog={blog}
-          like={this.like(blog.id)}
-          remove={this.remove(blog.id)}
-          deletable={
-            blog.user === undefined ||
-            blog.user.username === this.props.user.username
-          }
-        />
-      ))}
+      {this.props.blogs.map(blog => <Blog key={blog.id} blog={blog} />)}
     </div>
   );
 
@@ -193,6 +183,27 @@ class App extends React.Component {
       <User user={this.props.users.find(u => u.id === id)} />
     </div>
   );
+
+  renderBlogDetails = id => {
+    const blog = this.props.blogs.find(b => b.id === id);
+    if (!blog) {
+      return null;
+    }
+
+    return (
+      <div>
+        <BlogDetails
+          blog={blog}
+          like={this.like(id)}
+          remove={this.remove(id)}
+          deletable={
+            blog.user === undefined ||
+            blog.user.username === this.props.user.username
+          }
+        />
+      </div>
+    );
+  };
 
   renderMain = () => (
     <div>
@@ -212,6 +223,11 @@ class App extends React.Component {
             />
           </Togglable>
           <Route exact path="/" render={() => this.renderBlogs()} />
+          <Route
+            exact
+            path="/blogs/:id"
+            render={({ match }) => this.renderBlogDetails(match.params.id)}
+          />
           <Route exact path="/users" render={() => this.renderUsers()} />
           <Route
             exact
@@ -224,7 +240,11 @@ class App extends React.Component {
   );
 
   render() {
-    return !this.props.user.name ? this.renderLogin() : this.renderMain();
+    if (!this.props.user.name) {
+      return this.renderLogin();
+    }
+
+    return this.renderMain();
   }
 }
 
