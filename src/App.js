@@ -1,9 +1,11 @@
 import React from 'react';
 import { connect } from 'react-redux';
+import { BrowserRouter as Router, Route, Link } from 'react-router-dom';
 import Blog from './components/Blog';
 import BlogForm from './components/BlogForm';
 import Notification from './components/Notification';
 import Togglable from './components/Togglable';
+import Users from './components/Users';
 import loginService from './services/login';
 import { showNotification } from './reducers/notificationReducer';
 import {
@@ -17,6 +19,7 @@ import {
   setUserInformation,
   clearUserInformation,
 } from './reducers/userInfoReducer';
+import { initializeUsers } from './reducers/userReducer';
 
 class App extends React.Component {
   constructor(props) {
@@ -41,6 +44,7 @@ class App extends React.Component {
     }
 
     this.props.initializeBlogs();
+    this.props.initializeUsers();
   }
 
   like = id => async () => {
@@ -131,76 +135,91 @@ class App extends React.Component {
     this.setState({ [event.target.name]: event.target.value });
   };
 
-  render() {
-    if (this.state.user === null) {
-      return (
+  renderLogin = () => (
+    <div>
+      <Notification notification={this.state.notification} />
+      <h2>Log in</h2>
+      <form onSubmit={this.login}>
         <div>
-          <Notification notification={this.state.notification} />
-          <h2>Log in</h2>
-          <form onSubmit={this.login}>
-            <div>
-              username
-              <input
-                type="text"
-                name="username"
-                value={this.state.username}
-                onChange={this.handleLoginChange}
-              />
-            </div>
-            <div>
-              password
-              <input
-                type="password"
-                name="password"
-                value={this.state.password}
-                onChange={this.handleLoginChange}
-              />
-            </div>
-            <button type="submit">log in</button>
-          </form>
+          username
+          <input
+            type="text"
+            name="username"
+            value={this.state.username}
+            onChange={this.handleLoginChange}
+          />
         </div>
-      );
-    }
-
-    const byLikes = (b1, b2) => b2.likes - b1.likes;
-
-    const blogsInOrder = this.props.blogs.sort(byLikes);
-    const name = this.props.user ? this.props.user.name : 'undefined';
-    const username = this.props.user ? this.props.user.username : 'undefined';
-
-    return (
-      <div>
-        <Notification />
-        {name} logged in <button onClick={this.logout}>logout</button>
-        <Togglable buttonLabel="add new blog">
-          <BlogForm
-            handleChange={this.handleLoginChange}
-            title={this.state.title}
-            author={this.state.author}
-            url={this.state.url}
-            handleSubmit={this.addBlog}
+        <div>
+          password
+          <input
+            type="password"
+            name="password"
+            value={this.state.password}
+            onChange={this.handleLoginChange}
           />
-        </Togglable>
-        <h2>blogs</h2>
-        {blogsInOrder.map(blog => (
-          <Blog
-            key={blog.id}
-            blog={blog}
-            like={this.like(blog.id)}
-            remove={this.remove(blog.id)}
-            deletable={
-              blog.user === undefined || blog.user.username === username
-            }
-          />
-        ))}
-      </div>
-    );
+        </div>
+        <button type="submit">log in</button>
+      </form>
+    </div>
+  );
+
+  renderBlogs = () => (
+    <div>
+      <h2>blogs</h2>
+      {this.props.blogs.map(blog => (
+        <Blog
+          key={blog.id}
+          blog={blog}
+          like={this.like(blog.id)}
+          remove={this.remove(blog.id)}
+          deletable={
+            blog.user === undefined ||
+            blog.user.username === this.props.user.username
+          }
+        />
+      ))}
+    </div>
+  );
+
+  renderUsers = () => (
+    <div>
+      <h2>users</h2>
+      <Users />
+    </div>
+  );
+
+  renderMain = () => (
+    <div>
+      <Router>
+        <div>
+          <h2>blog app</h2>
+          <Notification />
+          {this.props.user.name} logged in{' '}
+          <button onClick={this.logout}>logout</button>
+          <Togglable buttonLabel="add new blog">
+            <BlogForm
+              handleChange={this.handleLoginChange}
+              title={this.state.title}
+              author={this.state.author}
+              url={this.state.url}
+              handleSubmit={this.addBlog}
+            />
+          </Togglable>
+          <Route exact path="/" render={() => this.renderBlogs()} />
+          <Route path="/users" render={() => this.renderUsers()} />
+        </div>
+      </Router>
+    </div>
+  );
+
+  render() {
+    return !this.props.user.name ? this.renderLogin() : this.renderMain();
   }
 }
 
 const mapStateToProps = state => {
   return {
-    blogs: state.blogs.blogs,
+    blogs: state.blogs.blogs.sort((a, b) => b.likes - a.likes),
     user: state.user.user,
   };
 };
@@ -214,4 +233,5 @@ export default connect(mapStateToProps, {
   setToken,
   setUserInformation,
   clearUserInformation,
+  initializeUsers,
 })(App);

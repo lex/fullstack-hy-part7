@@ -1,7 +1,7 @@
 const USERINFO_SET = 'USERINFO_SET';
 const USERINFO_CLEAR = 'USERINFO_CLEAR';
 
-const initialState = { user: null };
+const initialState = { user: { name: '', username: '', token: '' } };
 
 const reducer = (store = initialState, action) => {
   if (action.type === USERINFO_SET) {
