@@ -13,13 +13,16 @@ import {
   updateBlog,
   setToken,
 } from './reducers/blogReducer';
+import {
+  setUserInformation,
+  clearUserInformation,
+} from './reducers/userInfoReducer';
 
 class App extends React.Component {
   constructor(props) {
     super(props);
 
     this.state = {
-      user: null,
       username: '',
       password: '',
       title: '',
@@ -33,7 +36,7 @@ class App extends React.Component {
 
     if (loggedUserJSON) {
       const user = JSON.parse(loggedUserJSON);
-      this.setState({ user });
+      this.props.setUserInformation(user);
       this.props.setToken(user.token);
     }
 
@@ -98,8 +101,8 @@ class App extends React.Component {
 
   logout = async () => {
     window.localStorage.removeItem('loggedBlogAppUser');
+    this.props.clearUserInformation();
     this.props.showNotification('info', 'logged out', 3);
-    this.setState({ user: null });
   };
 
   login = async event => {
@@ -112,11 +115,13 @@ class App extends React.Component {
       });
 
       window.localStorage.setItem('loggedBlogAppUser', JSON.stringify(user));
+
+      this.props.setUserInformation(user);
       this.props.setToken(user.token);
 
       this.props.showNotification('info', 'welcome back!', 3);
 
-      this.setState({ username: '', password: '', user });
+      this.setState({ username: '', password: '' });
     } catch (exception) {
       this.props.showNotification('error', 'invalid credentials', 3);
     }
@@ -160,12 +165,13 @@ class App extends React.Component {
     const byLikes = (b1, b2) => b2.likes - b1.likes;
 
     const blogsInOrder = this.props.blogs.sort(byLikes);
+    const name = this.props.user ? this.props.user.name : 'undefined';
+    const username = this.props.user ? this.props.user.username : 'undefined';
 
     return (
       <div>
         <Notification />
-        {this.state.user.name} logged in{' '}
-        <button onClick={this.logout}>logout</button>
+        {name} logged in <button onClick={this.logout}>logout</button>
         <Togglable buttonLabel="add new blog">
           <BlogForm
             handleChange={this.handleLoginChange}
@@ -183,8 +189,7 @@ class App extends React.Component {
             like={this.like(blog.id)}
             remove={this.remove(blog.id)}
             deletable={
-              blog.user === undefined ||
-              blog.user.username === this.state.user.username
+              blog.user === undefined || blog.user.username === username
             }
           />
         ))}
@@ -196,6 +201,7 @@ class App extends React.Component {
 const mapStateToProps = state => {
   return {
     blogs: state.blogs.blogs,
+    user: state.user.user,
   };
 };
 
@@ -206,4 +212,6 @@ export default connect(mapStateToProps, {
   removeBlog,
   updateBlog,
   setToken,
+  setUserInformation,
+  clearUserInformation,
 })(App);

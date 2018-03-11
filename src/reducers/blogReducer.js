@@ -56,6 +56,7 @@ export const addBlog = blog => {
 export const removeBlog = id => {
   return async dispatch => {
     await blogService.remove(id);
+
     dispatch({
       type: BLOG_REMOVE,
       id,
